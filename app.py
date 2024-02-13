@@ -66,7 +66,6 @@ def main():
     # Perhitungan Evaluasi
     mse = mean_squared_error(y_test_orig, y_pred)    #  perhitungan MSE
     rmse = math.sqrt(mse)                            #  perhitungan RMSE    
-    mae = mean_absolute_error(y_test_orig, y_pred)   #  perhitungan MAE
     mad = np.mean(np.abs(y_test_orig - y_pred))      #  perhitungan MAD
     mape = np.mean(np.abs((y_test_orig - y_pred) / y_test_orig)) * 100
 
@@ -157,7 +156,7 @@ def visualize_predictions(data, train_size, n_steps, y_test_orig, y_pred):
 
     fig_all_prices.add_trace(go.Scatter(x=data.index, y=data['Open'], mode='lines', name='Opening Price', line=dict(color='red')))
     fig_all_prices.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Closing Price', line=dict(color='green')))
-    fig_all_prices.add_trace(go.Scatter(x=data.index, y=data['Low'], mode='lines', name='Low Price', line=dict(color='black')))
+    fig_all_prices.add_trace(go.Scatter(x=data.index, y=data['Low'], mode='lines', name='Low Price', line=dict(color='yellow')))
     fig_all_prices.add_trace(go.Scatter(x=data.index, y=data['High'], mode='lines', name='High Price', line=dict(color='blue')))
 
     fig_all_prices.update_layout(
@@ -172,7 +171,7 @@ def visualize_predictions(data, train_size, n_steps, y_test_orig, y_pred):
 
     fig_subplots.add_trace(go.Scatter(x=data.index, y=data['Open'], mode='lines', name='Opening Price', line=dict(color='red')), row=1, col=1)
     fig_subplots.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Closing Price', line=dict(color='green')), row=1, col=2)
-    fig_subplots.add_trace(go.Scatter(x=data.index, y=data['Low'], mode='lines', name='Low Price', line=dict(color='black')), row=2, col=1)
+    fig_subplots.add_trace(go.Scatter(x=data.index, y=data['Low'], mode='lines', name='Low Price', line=dict(color='yellow')), row=2, col=1)
     fig_subplots.add_trace(go.Scatter(x=data.index, y=data['High'], mode='lines', name='High Price', line=dict(color='blue')), row=2, col=2)
 
     fig_subplots.update_layout(title='Stock Price Subplots', showlegend=False)
