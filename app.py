@@ -21,7 +21,7 @@ def main():
     # Sidebar Input Data
     st.sidebar.header("Data Download")
     stock_symbol = st.sidebar.text_input("Masukkan Nama Coin (e.g., SAND-USD):", "SAND-USD")
-    start_date = st.sidebar.date_input("Start Date (80% data latih)", pd.to_datetime("2022-01-01"))
+    start_date = st.sidebar.date_input("Start Date (80% data latih)", pd.to_datetime("2021-01-01"))
     end_date = st.sidebar.date_input("End Date", pd.to_datetime("2024-01-01"))
 
     # Download stock price data
