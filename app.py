@@ -20,8 +20,8 @@ def main():
     
     # Sidebar Input Data
     st.sidebar.header("Data Download")
-    stock_symbol = st.sidebar.text_input("Masukkan Nama Coin (e.g., SAND-USD):", "SAND-USD")
-    start_date = st.sidebar.date_input("Start Date (80% data latih)", pd.to_datetime("2021-01-01"))
+    stock_symbol = st.sidebar.text_input("Masukkan Nama Coin (e.g., SAND-USD):", "STX4847-USD")
+    start_date = st.sidebar.date_input("Start Date (80% data latih)", pd.to_datetime("2022-01-01"))
     end_date = st.sidebar.date_input("End Date", pd.to_datetime("2024-01-01"))
 
     # Download stock price data
@@ -73,10 +73,9 @@ def main():
     # Display results
     
     st.header(f"Results for {model_type} Model")
-    st.write("Mean Squared Error (MSE):", mse)
-    st.write("Root Mean Squared Error (RMSE):", rmse)
-    st.write("Mean Absolute Deviation (MAD):", mad)
-    st.write("Mean Absolute Percentage Error (MAPE):", mape)
+    st.write("Root Mean Squared Error (RMSE):", round(rmse, 5))
+    st.write("Mean Absolute Deviation (MAD):", round (mad, 5))
+    st.write("Mean Absolute Percentage Error (MAPE):", round (mape, 5))
 
     # Visualize predictions
     st.header("Visual Prediksi")
@@ -128,6 +127,11 @@ def prepare_data(data, n_steps):
 def visualize_predictions(data, train_size, n_steps, y_test_orig, y_pred):
     fig = go.Figure()
 
+    fig.add_trace(go.Scatter(x=data.index[:train_size + n_steps],  # Menambahkan n_steps untuk data latih
+                             y=data['Close'][:train_size + n_steps],  # Menambahkan n_steps untuk data latih
+                             mode='lines',
+                             name="Training Data",
+                             line=dict(color='gray')))
 
     fig.add_trace(go.Scatter(x=data.index[train_size + n_steps:],
                              y=y_test_orig.flatten(),
