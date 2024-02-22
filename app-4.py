@@ -16,7 +16,7 @@ import plotly.graph_objects as go
 # Streamlit app
 def main():
     st.title("Prediksi Crypto Metaverse")
-    st.write("Sistem Prediksi menggunakan Algoritma Long Short Term Memory dan Gated Recurrent Unit, sistem ini menggunakan framework streamlit untuk web interaktif.")
+    st.write("Sistem Prediksi menggunakan Algoritma Long Short Term Memory dan Gated Recurrent Unit, sistem ini diharapkan dapat menjadi landasan untuk strategi perdagangan yang lebih cerdas dan keputusan investasi yang lebih baik dalam ekosistem cryptocurrency.")
     # Sidebar Input Data
     #--------------------#
     st.sidebar.header("Data Download")
@@ -40,6 +40,10 @@ def main():
     high_prices = data['High'].values.reshape(-1, 1)
     scaler_high = MinMaxScaler(feature_range=(0, 1))
     scaled_data_high = scaler_high.fit_transform(high_prices)
+    
+    low_prices = data['Low'].values.reshape(-1, 1)
+    scaler_low = MinMaxScaler(feature_range=(0, 1))
+    scaled_data_low = scaler_low.fit_transform(low_prices)
     #------------------------------#
 
 
@@ -49,6 +53,7 @@ def main():
     X, y = prepare_data_close(scaled_data_close, n_steps)
     A, b = prepare_data_open(scaled_data_open, n_steps)
     C, d = prepare_data_high(scaled_data_high, n_steps)
+    P, q = prepare_data_low(scaled_data_low, n_steps)
 
     # Splitting into train and test sets
     train_size_close = int(len(X) * 0.8)
@@ -62,6 +67,10 @@ def main():
     train_size_high = int(len(C) * 0.8)
     C_train, C_test = C[:train_size_high], C[train_size_high:]
     d_train, d_test = d[:train_size_high], b[train_size_high:]
+    
+    train_size_low = int(len(P) * 0.8)
+    P_train, P_test = P[:train_size_low], P[train_size_low:]
+    q_train, q_test = q[:train_size_low], q[train_size_low:]
     #-----------------#
     
     # Reshape data for LSTM and GRU models
@@ -96,6 +105,10 @@ def main():
     d_pred = final_model.predict(C_test)
     d_pred = scaler_high.inverse_transform(d_pred)
     d_test_orig = scaler_high.inverse_transform(d_test.reshape(-1, 1))
+    
+    q_pred = final_model.predict(P_test)
+    q_pred = scaler_low.inverse_transform(q_pred)
+    q_test_orig = scaler_low.inverse_transform(q_test.reshape(-1, 1))
 
     # Perhitungan Evaluasi
     #--------------------#
@@ -114,9 +127,14 @@ def main():
     mad_high = np.mean(np.abs(d_test_orig - d_pred))      #  perhitungan MAD
     mape_high = np.mean(np.abs((d_test_orig - d_pred) / d_test_orig)) * 100
     
+    mse_low = mean_squared_error(q_test_orig, q_pred)    #  perhitungan MSE
+    rmse_low = math.sqrt(mse_low)                       #  perhitungan RMSE    
+    mad_low = np.mean(np.abs(q_test_orig - q_pred))      #  perhitungan MAD
+    mape_low = np.mean(np.abs((q_test_orig - q_pred) / q_test_orig)) * 100
+    #-----------------------------------------------#
     
     #-----------------Selected Price----------------#
-    CloseTab, OpenTab, HighTab, ActualTab, ResultTab = st.tabs(["Close", "Open", "High", "Aqtual", "All Result"])
+    CloseTab, OpenTab, HighTab, LowTab, ActualTab, ResultTab = st.tabs(["Close", "Open", "High", "Low", "Actual", "All Result"])
     with CloseTab:
         # Display results
         st.header(f"Results Close Price for {model_type} Model")
@@ -144,7 +162,7 @@ def main():
         
         # Combine data, time information, and price difference into one dataframe with column names
         combined_data_close = pd.DataFrame({
-            'Tanggal': data.index[train_size_close + n_steps:],
+            'Tanggal': data.index.date[train_size_close + n_steps:],
             'Actual_Prices': y_test_orig.flatten(),
             'Predicted_Prices': predicted_prices_str_close,
             'Price_Difference': abs(price_difference_close),
@@ -153,7 +171,6 @@ def main():
     
         # Format the 'Percentage_Difference' column to include the percentage symbol
         combined_data_close['Percentage_Difference'] = combined_data_close['Percentage_Difference'].map("{:.2f}%".format)
-
 
         # Display the combined data table
         st.table(combined_data_close)
@@ -175,7 +192,7 @@ def main():
         percentage_difference_open = (price_difference_open / b_test_orig.flatten()) * 100
         predicted_prices_str_open = [f"{val:.5f}" for val in b_pred.flatten()]
         combined_data_open = pd.DataFrame({
-            'Tanggal': data.index[train_size_open + n_steps:],
+            'Tanggal': data.index.date[train_size_open + n_steps:],
             'Actual_Prices': b_test_orig.flatten(),
             'Predicted_Prices': predicted_prices_str_open,
             'Price_Difference': abs(price_difference_open),
@@ -203,7 +220,7 @@ def main():
         percentage_difference_high = (price_difference_high / d_test_orig.flatten()) * 100
         predicted_prices_str_high = [f"{val:.5f}" for val in d_pred.flatten()]
         combined_data_high = pd.DataFrame({
-            'Tanggal': data.index[train_size_high + n_steps:],
+            'Tanggal': data.index.date[train_size_high + n_steps:],
             'Actual_Prices': d_test_orig.flatten(),
             'Predicted_Prices': predicted_prices_str_high,
             'Price_Difference': abs(price_difference_high),
@@ -213,6 +230,34 @@ def main():
         # Display the combined data table
         st.table(combined_data_high)
         
+
+    with LowTab:
+        # Display results
+        st.header(f"Results Low Price for {model_type} Model")
+        st.write("Root Mean Squared Error (RMSE):", round(rmse_low, 5))
+        st.write("Mean Absolute Deviation (MAD):", round (mad_low, 5))
+        st.write("Mean Absolute Percentage Error (MAPE):", round (mape_low, 5))
+        
+        # Visualize predictions
+        visualize_predictions_low(data, train_size_low, n_steps, q_test_orig, q_pred)
+        
+        # Display combined actual and predicted data table with time information
+        st.header("Table Low Harga Asli dan Harga Prediksi")
+        st.write("Data range:", data.index[train_size_low + n_steps:].min(), "to", data.index[train_size_low + n_steps:].max())
+        price_difference_low = q_test_orig.flatten() - q_pred.flatten()
+        percentage_difference_low = (price_difference_low / q_test_orig.flatten()) * 100
+        predicted_prices_str_low = [f"{val:.5f}" for val in q_pred.flatten()]
+        combined_data_low = pd.DataFrame({
+            'Tanggal': data.index.date[train_size_low + n_steps:],
+            'Actual_Prices': q_test_orig.flatten(),
+            'Predicted_Prices': predicted_prices_str_low,
+            'Price_Difference': abs(price_difference_low),
+            'Percentage_Difference': abs(percentage_difference_low)
+        })
+        combined_data_low['Percentage_Difference'] = combined_data_low['Percentage_Difference'].map("{:.2f}%".format)
+        # Display the combined data table
+        st.table(combined_data_low)
+
 
     with ActualTab:
         # Display results
@@ -249,9 +294,34 @@ def main():
     with ResultTab:
         # Display results
         st.header(f"Results All Price Prediction for {model_type} Model")
-        # Visualize predictions
         
-        visualize_predictions_all_pred(data, train_size_open, train_size_close, train_size_high, n_steps, b_pred, y_pred, d_pred)
+        # Visualize predictions
+        visualize_predictions_all_pred(data, train_size_open, train_size_close, train_size_high, train_size_low, n_steps, b_pred, y_pred, d_pred, q_pred)
+        
+        # Display combined actual and predicted data table with time information
+        st.header("Table All Price Prediction")
+        
+        # Add time information to the header
+        st.write("Data range:", data.index[train_size_close + n_steps:].min(), "to", data.index[train_size_close + n_steps:].max())
+        
+        # Convert predicted prices to strings and cut off decimal places after the 5th digit
+        predicted_prices_str_close = [f"{val:.5f}" for val in y_pred.flatten()]
+        predicted_prices_str_open = [f"{val:.5f}" for val in b_pred.flatten()]
+        predicted_prices_str_high = [f"{val:.5f}" for val in d_pred.flatten()]
+        predicted_prices_str_low = [f"{val:.5f}" for val in q_pred.flatten()]
+        
+        # Combine data, time information, and price difference into one dataframe with column names
+        combined_data_all = pd.DataFrame({
+            'Tanggal': data.index.date[train_size_close + n_steps:],
+            'Close_Predict': y_test_orig.flatten(),
+            'Open_Predict': b_test_orig.flatten(),
+            'High_Predict': d_test_orig.flatten(),
+            'Low_Predict': q_test_orig.flatten(),
+
+        })
+    
+        # Display the combined data table
+        st.table(combined_data_all)
         
 #---------------------------------------#
 def prepare_data_close(data, n_steps):
@@ -277,6 +347,14 @@ def prepare_data_high(data, n_steps):
         C.append(np.concatenate([lag_values_high, [data[i + n_steps, 0]]]))
         d.append(data[i + n_steps, 0])
     return np.array(C), np.array(d)
+
+def prepare_data_low(data, n_steps):
+    P, q = [], []
+    for i in range(len(data) - n_steps):
+        lag_values_low = data[i:(i + n_steps), 0]
+        P.append(np.concatenate([lag_values_low, [data[i + n_steps, 0]]]))
+        q.append(data[i + n_steps, 0])
+    return np.array(P), np.array(q)
 #---------------------------------------#
 
 #Visual Grafik_Close
@@ -371,10 +449,40 @@ def visualize_predictions_high(data, train_size_high, n_steps, d_test_orig, d_pr
                       template='plotly_dark')
         
     st.plotly_chart(fig_high)
+    
+
+#Visual Grafik_Low
+def visualize_predictions_low(data, train_size_low, n_steps, q_test_orig, q_pred):
+    fig_low = go.Figure()
+
+    fig_low.add_trace(go.Scatter(x=data.index[:train_size_low + n_steps],  # Menambahkan n_steps untuk data latih
+                             y=data['Low'][:train_size_low + n_steps],  # Menambahkan n_steps untuk data latih
+                             mode='lines',
+                             name="Training Data",
+                             line=dict(color='gray')))
+
+    fig_low.add_trace(go.Scatter(x=data.index[train_size_low + n_steps:],
+                             y=q_test_orig.flatten(),
+                             mode='lines',
+                             name="Actual Stock Prices",
+                             line=dict(color='blue')))
+
+    fig_low.add_trace(go.Scatter(x=data.index[train_size_low + n_steps:],
+                             y=q_pred.flatten(),
+                             mode='lines',
+                             name="Predicted Stock Prices",
+                             line=dict(color='red')))
+
+    fig_low.update_layout(title="Low Price Prediction",
+                      xaxis_title="Date",
+                      yaxis_title="Stock Price (USD)",
+                      template='plotly_dark')
+        
+    st.plotly_chart(fig_low)
 
     
 #Visual Grafik All Predict
-def visualize_predictions_all_pred(data,train_size_open,train_size_close, train_size_high, n_steps, b_pred, y_pred, d_pred):
+def visualize_predictions_all_pred(data,train_size_open,train_size_close, train_size_high, train_size_low, n_steps, b_pred, y_pred, d_pred, q_pred):
     fig_all_prices_predict = go.Figure()
     
     fig_all_prices_predict.add_trace(go.Scatter(x=data.index[train_size_open + n_steps:],
@@ -393,6 +501,12 @@ def visualize_predictions_all_pred(data,train_size_open,train_size_close, train_
                              y=d_pred.flatten(),
                              mode='lines',
                              name="Prediksi High",
+                             line=dict(color='blue')))
+    
+    fig_all_prices_predict.add_trace(go.Scatter(x=data.index[train_size_low + n_steps:],
+                             y=q_pred.flatten(),
+                             mode='lines',
+                             name="Prediksi Low",
                              line=dict(color='yellow')))
     
     fig_all_prices_predict.update_layout(title="All Price Prediction",
