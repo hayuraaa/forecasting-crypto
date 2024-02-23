@@ -12,6 +12,8 @@ import plotly.graph_objects as go
 import plotly.subplots as sp
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+import datetime
+from datetime import timedelta
 
 # Streamlit app
 def main():
@@ -20,7 +22,7 @@ def main():
     # Sidebar Input Data
     #--------------------#
     st.sidebar.header("Data Download")
-    stock_symbol =st.sidebar.selectbox("Masukkan Nama Coin:", ["STX4847-USD", "ICP-USD", "SAND-USD", "THETA-USD", "MANA-USD"])
+    stock_symbol =st.sidebar.selectbox("Masukkan Nama Coin:", ["STX4847-USD", "ICP-USD", "RNDR-USD", "AXS-USD", "WEMIX-USD", "SAND-USD", "THETA-USD", "MANA-USD", "APE-USD", "ENJ-USD", "ZIL-USD", "ILV-USD"])
     start_date = st.sidebar.date_input("Start Date", pd.to_datetime("2022-01-01"))
     end_date = st.sidebar.date_input("End Date", pd.to_datetime("2024-01-01"))
     # Download stock price data
@@ -90,6 +92,21 @@ def main():
         final_model = load_model("stx_model_lstm.h5")
     else:
         final_model = load_model("stx_model_gru.h5")
+        
+    if model_type == "LSTM":
+        final_model_high = load_model("high_model_lstm.h5")
+    else:
+        final_model_high = load_model("high_model_gru.h5")
+    
+    if model_type == "LSTM":
+        final_model_open = load_model("open_model_lstm.h5")
+    else:
+        final_model_open = load_model("open_model_gru.h5")
+        
+    if model_type == "LSTM":
+        final_model_low = load_model("open_model_lstm.h5")
+    else:
+        final_model_low = load_model("open_model_gru.h5")
     #---------------------------#
 
     # Model evaluation
@@ -98,21 +115,21 @@ def main():
     y_pred = scaler_close.inverse_transform(y_pred)
     y_test_orig = scaler_close.inverse_transform(y_test.reshape(-1, 1))
     
-    b_pred = final_model.predict(A_test)
+    b_pred = final_model_open.predict(A_test)
     b_pred = scaler_open.inverse_transform(b_pred)
     b_test_orig = scaler_open.inverse_transform(b_test.reshape(-1, 1))
     
-    d_pred = final_model.predict(C_test)
+    d_pred = final_model_high.predict(C_test)
     d_pred = scaler_high.inverse_transform(d_pred)
     d_test_orig = scaler_high.inverse_transform(d_test.reshape(-1, 1))
     
-    q_pred = final_model.predict(P_test)
+    q_pred = final_model_low.predict(P_test)
     q_pred = scaler_low.inverse_transform(q_pred)
     q_test_orig = scaler_low.inverse_transform(q_test.reshape(-1, 1))
 
     # Perhitungan Evaluasi
     #--------------------#
-    mse_close = mean_squared_error(y_test_orig, y_pred)    #  perhitungan MSE
+    mse_close = mean_squared_error(y_pred, y_test_orig)    #  perhitungan MSE
     rmse_close = math.sqrt(mse_close)                      #  perhitungan RMSE    
     mad_close = np.mean(np.abs(y_test_orig - y_pred))      #  perhitungan MAD
     mape_close = np.mean(np.abs((y_test_orig - y_pred) / y_test_orig)) * 100
@@ -135,6 +152,7 @@ def main():
     
     #-----------------Selected Price----------------#
     CloseTab, OpenTab, HighTab, LowTab, ActualTab, ResultTab = st.tabs(["Close", "Open", "High", "Low", "Actual", "All Result"])
+    
     with CloseTab:
         # Display results
         st.header(f"Results Close Price for {model_type} Model")
@@ -174,6 +192,7 @@ def main():
 
         # Display the combined data table
         st.table(combined_data_close)
+        
         
     with OpenTab:
         # Display results
@@ -291,6 +310,24 @@ def main():
         st.plotly_chart(fig_all_prices)
         st.plotly_chart(fig_subplots)
         
+        # Display combined actual and predicted data table with time information
+        st.header("Table All Price")
+        
+        # Add time information to the header
+        st.write("Data range:", start_date, "to", end_date)
+
+        # Combine data, time information, and price difference into one dataframe with column names
+        combined_data_all_actual = pd.DataFrame({
+            'Close_Predict':data['Close'],
+            'Open_Predict': data['Open'],
+            'High_Predict': data['High'],
+            'Low_Predict': data['Low']
+
+        })
+    
+        # Display the combined data table
+        st.table(combined_data_all_actual)
+        
     with ResultTab:
         # Display results
         st.header(f"Results All Price Prediction for {model_type} Model")
@@ -303,20 +340,14 @@ def main():
         
         # Add time information to the header
         st.write("Data range:", data.index[train_size_close + n_steps:].min(), "to", data.index[train_size_close + n_steps:].max())
-        
-        # Convert predicted prices to strings and cut off decimal places after the 5th digit
-        predicted_prices_str_close = [f"{val:.5f}" for val in y_pred.flatten()]
-        predicted_prices_str_open = [f"{val:.5f}" for val in b_pred.flatten()]
-        predicted_prices_str_high = [f"{val:.5f}" for val in d_pred.flatten()]
-        predicted_prices_str_low = [f"{val:.5f}" for val in q_pred.flatten()]
-        
+
         # Combine data, time information, and price difference into one dataframe with column names
         combined_data_all = pd.DataFrame({
             'Tanggal': data.index.date[train_size_close + n_steps:],
-            'Close_Predict': y_test_orig.flatten(),
-            'Open_Predict': b_test_orig.flatten(),
-            'High_Predict': d_test_orig.flatten(),
-            'Low_Predict': q_test_orig.flatten(),
+            'Close_Predict': predicted_prices_str_close,
+            'Open_Predict': predicted_prices_str_open,
+            'High_Predict': predicted_prices_str_high,
+            'Low_Predict': predicted_prices_str_low
 
         })
     
